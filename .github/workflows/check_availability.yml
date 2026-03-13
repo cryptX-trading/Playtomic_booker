@@ -1,0 +1,43 @@
+name: Check Playtomic Availability
+
+on:
+  schedule:
+    # Toutes les 5 minutes
+    # NOTE : Si le repo est privé, préfère */10 pour rester sous le quota
+    # gratuit GitHub Actions (2000 min/mois). Un repo public est illimité.
+    - cron: "*/5 * * * *"
+  # Permet de lancer manuellement depuis l'onglet Actions de GitHub
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Restaure le state.json depuis le cache pour éviter les doublons
+      - name: Restore notification state
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          # Clé unique par run pour forcer la sauvegarde à chaque fois
+          key: playtomic-state-${{ github.run_id }}
+          # Restaure depuis le run précédent
+          restore-keys: |
+            playtomic-state-
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run availability checker
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python booking_manager.py

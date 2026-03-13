@@ -19,7 +19,7 @@ venues:
   - name: "Casa Padel St Denis"
     tenant_id: "d04b7959-3840-4894-a8bd-8f57d30b2eff"
   - name: "Casa Padel Asnieres"
-    tenant_id: "0628edc6-3447-4d87-ad90-5b89f5ce1dd9&"
+    tenant_id: "0628edc6-3447-4d87-ad90-5b89f5ce1dd9"
   # Exemple avec un 2e club (décommente et remplis) :
   # - name: "Autre Club"
   #   tenant_id: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
