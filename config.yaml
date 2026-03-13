@@ -1,0 +1,50 @@
+# =============================================================================
+# Configuration du Playtomic Watcher
+# =============================================================================
+# Remplis ce fichier avec tes clubs et tes créneaux souhaités.
+# Consulte le README.md pour savoir comment trouver le tenant_id d'un club.
+
+# Sport à surveiller
+sport_id: "PADEL"
+
+# Nombre de jours à l'avance à vérifier (depuis aujourd'hui)
+days_ahead: 7
+
+# =============================================================================
+# Clubs à surveiller (ajoute autant de venues que tu veux)
+# =============================================================================
+venues:
+  - name: "Paris Padel"
+    tenant_id: "25bf0a66-043e-433d-93fa-56f5dbc6b3ce"
+  - name: "Casa Padel St Denis"
+    tenant_id: "d04b7959-3840-4894-a8bd-8f57d30b2eff"
+  - name: "Casa Padel Asnieres"
+    tenant_id: "0628edc6-3447-4d87-ad90-5b89f5ce1dd9&"
+  # Exemple avec un 2e club (décommente et remplis) :
+  # - name: "Autre Club"
+  #   tenant_id: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+
+# =============================================================================
+# Créneaux désirés
+# =============================================================================
+# Pour chaque règle, définis :
+#   - days        : liste des jours en français (lundi, mardi, mercredi,
+#                   jeudi, vendredi, samedi, dimanche)
+#   - start_times : liste des horaires de début (format HH:MM)
+#   - duration_min: durée minimale acceptable en minutes
+#
+# Un créneau déclenche une notification s'il correspond à AU MOINS UNE règle.
+# =============================================================================
+desired_slots:
+  # Soirs de semaine
+  - days:
+      - mardi
+      - jeudi
+    start_times:
+      - "19:00"
+      - "19:30"
+      - "20:00"
+      - "20:30"
+      - "21:00"
+    duration_min: 90
+
