@@ -181,6 +181,10 @@ def format_message(venue_name: str, date_str: str, start_time: str, duration: in
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    log.info("=" * 60)
+    log.info("Démarrage du run Playtomic Watcher")
+    log.info("=" * 60)
+
     config = load_config()
     state = load_state()
     notified_keys: set = set(state.get("notified", []))
@@ -189,15 +193,20 @@ def main() -> None:
     days_ahead = config.get("days_ahead", 7)
     sport_id = config.get("sport_id", "PADEL")
     desired_slots = config.get("desired_slots", [])
+    venues = config.get("venues", [])
+
+    log.info("Sport : %s | Horizon : %d jours | Clubs : %d", sport_id, days_ahead, len(venues))
+    log.info("Créneaux déjà notifiés en mémoire : %d", len(notified_keys))
 
     bot_token = config["telegram"]["bot_token"]
     chat_id = config["telegram"]["chat_id"]
 
     new_notifications = 0
 
-    for venue in config.get("venues", []):
+    for venue in venues:
         venue_name = venue["name"]
         tenant_id = venue["tenant_id"]
+        log.info("--- Vérification : %s ---", venue_name)
 
         for offset in range(days_ahead):
             check_date = today + timedelta(days=offset)
@@ -210,6 +219,9 @@ def main() -> None:
                 log.warning("Erreur API pour %s le %s : %s", venue_name, date_str, e)
                 continue
 
+            total_slots = sum(len(r.get("slots", [])) for r in resources)
+            log.info("  %s : %d créneau(x) disponible(s) au total", date_str, total_slots)
+
             for resource in resources:
                 for slot in resource.get("slots", []):
                     start_time = slot.get("start_time", "")
@@ -221,16 +233,18 @@ def main() -> None:
 
                     key = make_key(tenant_id, date_str, start_time)
                     if key in notified_keys:
-                        log.debug("Créneau déjà notifié : %s", key)
+                        log.info("  [déjà notifié] %s à %s", date_str, start_time)
                         continue
 
-                    log.info("Nouveau créneau : %s %s à %s", venue_name, date_str, start_time)
+                    log.info("  ✓ NOUVEAU CRÉNEAU : %s %s à %s (%d min)", venue_name, date_str, start_time, duration)
                     message = format_message(venue_name, date_str, start_time, duration, price)
                     send_telegram(bot_token, chat_id, message)
                     notified_keys.add(key)
                     new_notifications += 1
 
-    log.info("%d nouvelle(s) notification(s) envoyée(s).", new_notifications)
+    log.info("=" * 60)
+    log.info("Run terminé — %d nouvelle(s) notification(s) envoyée(s).", new_notifications)
+    log.info("=" * 60)
 
     # Purge des créneaux passés et sauvegarde du state
     notified_keys = purge_old_entries(notified_keys, today)
