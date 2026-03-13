@@ -46,5 +46,6 @@ desired_slots:
       - "20:00"
       - "20:30"
       - "21:00"
-    duration_min: 90
+      - "22:00"
+    duration_min: 60
 
