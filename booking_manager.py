@@ -269,10 +269,17 @@ def main() -> None:
     state = load_state()
     notified_keys: set = set(state.get("notified", []))
 
+    hour_start = config.get("active_hours_start", 8)
+    hour_end = config.get("active_hours_end", 22)
+
     while True:
-        log.info("--- Nouvelle vérification ---")
-        notified_keys = run_once(config, notified_keys)
-        log.info("Prochain check dans %d minutes...", interval_min)
+        current_hour = datetime.now().hour
+        if hour_start <= current_hour < hour_end:
+            log.info("--- Nouvelle vérification ---")
+            notified_keys = run_once(config, notified_keys)
+            log.info("Prochain check dans %d minutes...", interval_min)
+        else:
+            log.info("Hors plage horaire (%dh-%dh), pause jusqu'au prochain cycle.", hour_start, hour_end)
         time.sleep(interval_min * 60)
 
 
