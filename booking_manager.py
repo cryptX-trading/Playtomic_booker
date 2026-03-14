@@ -150,7 +150,7 @@ def send_telegram(bot_token: str, chat_id: str, message: str) -> None:
         log.error("Erreur lors de l'envoi de la notification Telegram : %s", e)
 
 
-def format_message(venue_name: str, date_str: str, start_time: str, duration: int, price: dict) -> str:
+def format_message(venue_name: str, date_str: str, start_time: str, duration: int, price: dict, tenant_id: str = "") -> str:
     dt = datetime.strptime(date_str, "%Y-%m-%d")
     day_en = dt.strftime("%A").lower()
     day_fr = FR_DAY_NAMES.get(day_en, day_en.capitalize())
@@ -168,12 +168,14 @@ def format_message(venue_name: str, date_str: str, start_time: str, duration: in
         if amount:
             price_str = f"\n💶 {amount} {currency}"
 
+    booking_url = f"https://app.playtomic.io/tenant/{tenant_id}" if tenant_id else "https://app.playtomic.io"
+
     return (
         f"🎾 <b>Terrain disponible !</b>\n"
         f"📍 {venue_name}\n"
         f"📅 {date_label} à {start_time} ({duration} min)"
         f"{price_str}\n"
-        f"🔗 https://app.playtomic.io"
+        f"🔗 <a href=\"{booking_url}\">Réserver sur Playtomic</a>"
     )
 
 
@@ -232,7 +234,7 @@ def run_once(config: dict, notified_keys: set) -> set:
                         continue
 
                     log.info("  ✓ NOUVEAU CRÉNEAU : %s %s à %s (%d min)", venue_name, date_str, start_time, duration)
-                    message = format_message(venue_name, date_str, start_time, duration, price)
+                    message = format_message(venue_name, date_str, start_time, duration, price, tenant_id)
                     send_telegram(bot_token, chat_id, message)
                     notified_keys.add(key)
                     new_notifications += 1
