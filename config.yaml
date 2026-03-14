@@ -10,6 +10,9 @@ sport_id: "PADEL"
 # Nombre de jours à l'avance à vérifier (depuis aujourd'hui)
 days_ahead: 7
 
+# Intervalle entre chaque vérification (en minutes)
+check_interval_min: 5
+
 # =============================================================================
 # Clubs à surveiller (ajoute autant de venues que tu veux)
 # =============================================================================

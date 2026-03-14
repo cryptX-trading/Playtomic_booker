@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import sys
+import time
 from datetime import date, datetime, timedelta
 
 import requests
@@ -180,15 +181,7 @@ def format_message(venue_name: str, date_str: str, start_time: str, duration: in
 # Boucle principale
 # ---------------------------------------------------------------------------
 
-def main() -> None:
-    log.info("=" * 60)
-    log.info("Démarrage du run Playtomic Watcher")
-    log.info("=" * 60)
-
-    config = load_config()
-    state = load_state()
-    notified_keys: set = set(state.get("notified", []))
-
+def run_once(config: dict, notified_keys: set) -> set:
     today = date.today()
     days_ahead = config.get("days_ahead", 7)
     sport_id = config.get("sport_id", "PADEL")
@@ -202,6 +195,7 @@ def main() -> None:
     chat_id = config["telegram"]["chat_id"]
 
     new_notifications = 0
+    matching_slots = []  # créneaux qui correspondent à la config (déjà notifiés ou non)
 
     for venue in venues:
         venue_name = venue["name"]
@@ -211,7 +205,7 @@ def main() -> None:
         for offset in range(days_ahead):
             check_date = today + timedelta(days=offset)
             date_str = check_date.isoformat()
-            day_of_week = check_date.strftime("%A").lower()  # "monday", etc.
+            day_of_week = check_date.strftime("%A").lower()
 
             try:
                 resources = playtomic_client.get_availability(tenant_id, sport_id, date_str)
@@ -231,9 +225,10 @@ def main() -> None:
                     if not is_desired(start_time, duration, day_of_week, desired_slots):
                         continue
 
+                    matching_slots.append(f"{venue_name} | {date_str} à {start_time} ({duration} min)")
+
                     key = make_key(tenant_id, date_str, start_time)
                     if key in notified_keys:
-                        log.info("  [déjà notifié] %s à %s", date_str, start_time)
                         continue
 
                     log.info("  ✓ NOUVEAU CRÉNEAU : %s %s à %s (%d min)", venue_name, date_str, start_time, duration)
@@ -243,12 +238,40 @@ def main() -> None:
                     new_notifications += 1
 
     log.info("=" * 60)
-    log.info("Run terminé — %d nouvelle(s) notification(s) envoyée(s).", new_notifications)
+    if matching_slots:
+        log.info("Créneaux correspondant à ta config (%d) :", len(matching_slots))
+        for s in matching_slots:
+            log.info("  • %s", s)
+    else:
+        log.info("Aucun créneau ne correspond à ta config.")
+
+    if new_notifications > 0:
+        log.info(">>> %d notification(s) Telegram envoyée(s) <<<", new_notifications)
+    else:
+        log.info(">>> Aucune nouvelle notification envoyée (déjà notifié ou rien de dispo) <<<")
     log.info("=" * 60)
 
-    # Purge des créneaux passés et sauvegarde du state
     notified_keys = purge_old_entries(notified_keys, today)
     save_state({"notified": sorted(notified_keys)})
+    return notified_keys
+
+
+def main() -> None:
+    config = load_config()
+    interval_min = config.get("check_interval_min", 5)
+
+    log.info("=" * 60)
+    log.info("Démarrage du Playtomic Watcher (intervalle : %d min)", interval_min)
+    log.info("=" * 60)
+
+    state = load_state()
+    notified_keys: set = set(state.get("notified", []))
+
+    while True:
+        log.info("--- Nouvelle vérification ---")
+        notified_keys = run_once(config, notified_keys)
+        log.info("Prochain check dans %d minutes...", interval_min)
+        time.sleep(interval_min * 60)
 
 
 if __name__ == "__main__":
