@@ -54,14 +54,5 @@ desired_slots:
       - "20:30"
     duration_min: 90
   # Week-ends
-  - days:
-      - dimanche
-    start_times:
-      - "10:00"
-      - "10:30"
-      - "11:00"
-      - "11:30"
-      - "12:00"
-      - "12:30"
-      - "13:00"
+
 
