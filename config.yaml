@@ -21,15 +21,25 @@ active_hours_end: 22
 # Clubs à surveiller (ajoute autant de venues que tu veux)
 # =============================================================================
 venues:
+  # Playtomic
   - name: "Paris Padel"
     tenant_id: "25bf0a66-043e-433d-93fa-56f5dbc6b3ce"
+    platform: "playtomic"
   - name: "Casa Padel St Denis"
     tenant_id: "d04b7959-3840-4894-a8bd-8f57d30b2eff"
+    platform: "playtomic"
   - name: "Casa Padel Asnieres"
     tenant_id: "0628edc6-3447-4d87-ad90-5b89f5ce1dd9"
-  # Exemple avec un 2e club (décommente et remplis) :
-  # - name: "Autre Club"
-  #   tenant_id: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+    platform: "playtomic"
+  # Anybuddy
+  - name: "Trinquet Village"
+    tenant_id: "trinquet-village-paris"
+    platform: "anybuddy"
+    activity: "padel"
+  - name: "Paris Padel (Anybuddy)"
+    tenant_id: "paris-padel"
+    platform: "anybuddy"
+    activity: "padel"
 
 # =============================================================================
 # Créneaux désirés : configurés par user dans Supabase (table users.slots_config)

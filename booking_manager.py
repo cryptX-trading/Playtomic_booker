@@ -17,6 +17,7 @@ PARIS_TZ = ZoneInfo("Europe/Paris")
 import requests
 import yaml
 
+import anybuddy_client
 import playtomic_client
 
 # ---------------------------------------------------------------------------
@@ -130,8 +131,43 @@ def save_user_state(user_id: int, slots_sent: list) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Cache des disponibilités Playtomic
+# Cache des disponibilités (Playtomic + Anybuddy)
 # ---------------------------------------------------------------------------
+
+def _fetch_playtomic_slots(venue: dict, date_str: str, sport_id: str) -> list:
+    tenant_id = venue["tenant_id"]
+    venue_name = venue["name"]
+    resources = playtomic_client.get_availability(tenant_id, sport_id, date_str)
+    slots = []
+    for resource in resources:
+        for slot in resource.get("slots", []):
+            raw_time = slot.get("start_time", "")
+            utc_dt = datetime.strptime(f"{date_str}T{raw_time}", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+            paris_dt = utc_dt.astimezone(PARIS_TZ)
+            slot["_tenant_id"] = tenant_id
+            slot["_venue_name"] = venue_name
+            slot["_date_str"] = paris_dt.strftime("%Y-%m-%d")
+            slot["_day_of_week"] = paris_dt.strftime("%A").lower()
+            slot["_start_time_paris"] = paris_dt.strftime("%H:%M")
+            slots.append(slot)
+    return slots
+
+
+def _fetch_anybuddy_slots(venue: dict, date_str: str, check_date) -> list:
+    center_id = venue["tenant_id"]
+    venue_name = venue["name"]
+    activity = venue.get("activity", "padel")
+    raw_slots = anybuddy_client.get_availability(center_id, activity, date_str)
+    slots = []
+    for slot in raw_slots:
+        slot["_tenant_id"] = center_id
+        slot["_venue_name"] = venue_name
+        slot["_date_str"] = date_str
+        slot["_day_of_week"] = check_date.strftime("%A").lower()
+        slot["_start_time_paris"] = slot["start_time"]  # déjà en heure locale
+        slots.append(slot)
+    return slots
+
 
 def fetch_all_availability(venues: list, days_ahead: int, sport_id: str) -> dict:
     """
@@ -142,36 +178,27 @@ def fetch_all_availability(venues: list, days_ahead: int, sport_id: str) -> dict
     cache = {}
 
     for venue in venues:
-        tenant_id = venue["tenant_id"]
+        platform = venue.get("platform", "playtomic")
         venue_name = venue["name"]
-        log.info("--- Récupération dispo : %s ---", venue_name)
+        log.info("--- Récupération dispo : %s (%s) ---", venue_name, platform)
 
         for offset in range(days_ahead):
             check_date = today + timedelta(days=offset)
             date_str = check_date.isoformat()
 
             try:
-                resources = playtomic_client.get_availability(tenant_id, sport_id, date_str)
-                slots = []
-                for resource in resources:
-                    for slot in resource.get("slots", []):
-                        # Convertir l'heure UTC → Paris et normaliser au format HH:MM
-                        raw_time = slot.get("start_time", "")
-                        utc_dt = datetime.strptime(f"{date_str}T{raw_time}", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
-                        paris_dt = utc_dt.astimezone(PARIS_TZ)
-                        slot["_tenant_id"] = tenant_id
-                        slot["_venue_name"] = venue_name
-                        slot["_date_str"] = paris_dt.strftime("%Y-%m-%d")
-                        slot["_day_of_week"] = paris_dt.strftime("%A").lower()
-                        slot["_start_time_paris"] = paris_dt.strftime("%H:%M")
-                        slots.append(slot)
-                cache[(tenant_id, date_str)] = slots
+                if platform == "anybuddy":
+                    slots = _fetch_anybuddy_slots(venue, date_str, check_date)
+                else:
+                    slots = _fetch_playtomic_slots(venue, date_str, sport_id)
+
+                cache[(venue["tenant_id"], date_str)] = slots
                 log.info("  %s (%s) : %d créneau(x) dispo", date_str, check_date.strftime("%A").lower(), len(slots))
                 for s in slots:
                     log.info("    → %s (Paris) | %d min", s["_start_time_paris"], s.get("duration", 0))
             except Exception as e:
                 log.warning("Erreur API pour %s le %s : %s", venue_name, date_str, e)
-                cache[(tenant_id, date_str)] = []
+                cache[(venue["tenant_id"], date_str)] = []
 
     return cache
 
