@@ -11,7 +11,7 @@ sport_id: "PADEL"
 days_ahead: 7
 
 # Intervalle entre chaque vérification (en minutes)
-check_interval_min: 15
+check_interval_min: 5
 
 # Plage horaire active (heure locale)
 active_hours_start: 8
