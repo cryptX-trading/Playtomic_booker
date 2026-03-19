@@ -10,6 +10,9 @@ import os
 import sys
 import time
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+PARIS_TZ = ZoneInfo("Europe/Paris")
 
 import requests
 import yaml
@@ -152,15 +155,20 @@ def fetch_all_availability(venues: list, days_ahead: int, sport_id: str) -> dict
                 slots = []
                 for resource in resources:
                     for slot in resource.get("slots", []):
+                        # Convertir l'heure UTC → Paris et normaliser au format HH:MM
+                        raw_time = slot.get("start_time", "")
+                        utc_dt = datetime.strptime(f"{date_str}T{raw_time}", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+                        paris_dt = utc_dt.astimezone(PARIS_TZ)
                         slot["_tenant_id"] = tenant_id
                         slot["_venue_name"] = venue_name
-                        slot["_date_str"] = date_str
-                        slot["_day_of_week"] = check_date.strftime("%A").lower()
+                        slot["_date_str"] = paris_dt.strftime("%Y-%m-%d")
+                        slot["_day_of_week"] = paris_dt.strftime("%A").lower()
+                        slot["_start_time_paris"] = paris_dt.strftime("%H:%M")
                         slots.append(slot)
                 cache[(tenant_id, date_str)] = slots
                 log.info("  %s (%s) : %d créneau(x) dispo", date_str, check_date.strftime("%A").lower(), len(slots))
                 for s in slots:
-                    log.info("    → %s | %d min", s.get("start_time"), s.get("duration", 0))
+                    log.info("    → %s (Paris) | %d min", s["_start_time_paris"], s.get("duration", 0))
             except Exception as e:
                 log.warning("Erreur API pour %s le %s : %s", venue_name, date_str, e)
                 cache[(tenant_id, date_str)] = []
@@ -261,7 +269,7 @@ def check_user(user: dict, availability_cache: dict, bot_token: str) -> list:
 
     for slots in availability_cache.values():
         for slot in slots:
-            start_time = slot.get("start_time", "")
+            start_time = slot["_start_time_paris"]
             duration = slot.get("duration", 0)
             price = slot.get("price", {})
             tenant_id = slot["_tenant_id"]
