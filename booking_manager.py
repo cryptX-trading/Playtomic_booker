@@ -227,7 +227,7 @@ def format_message(venue_name: str, date_str: str, start_time: str, duration: in
     date_label = f"{day_fr} {dt.day} {month_fr[dt.month]}"
 
     price_str = ""
-    if price:
+    if price and isinstance(price, dict):
         amount = price.get("amount", "")
         currency = price.get("currency", "")
         if amount:
