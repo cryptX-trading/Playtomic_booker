@@ -19,6 +19,7 @@ import yaml
 
 import anybuddy_client
 import playtomic_client
+import supabase_client
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -34,16 +35,6 @@ log = logging.getLogger(__name__)
 # Constantes
 # ---------------------------------------------------------------------------
 CONFIG_FILE = "config.yaml"
-
-FR_TO_EN_DAYS = {
-    "lundi": "monday",
-    "mardi": "tuesday",
-    "mercredi": "wednesday",
-    "jeudi": "thursday",
-    "vendredi": "friday",
-    "samedi": "saturday",
-    "dimanche": "sunday",
-}
 
 FR_DAY_NAMES = {
     "monday": "Lundi",
@@ -71,63 +62,6 @@ def load_config() -> dict:
     config["telegram_bot_token"] = bot_token
     return config
 
-
-# ---------------------------------------------------------------------------
-# Supabase
-# ---------------------------------------------------------------------------
-
-def _supabase_headers() -> dict:
-    key = os.environ.get("SUPABASE_KEY", "")
-    if not key:
-        log.error("La variable d'environnement SUPABASE_KEY doit être définie.")
-        sys.exit(1)
-    return {
-        "apikey": key,
-        "Authorization": f"Bearer {key}",
-        "Content-Type": "application/json",
-    }
-
-
-def _supabase_url(path: str) -> str:
-    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
-    if not base:
-        log.error("La variable d'environnement SUPABASE_URL doit être définie.")
-        sys.exit(1)
-    return f"{base}/rest/v1/{path}"
-
-
-def load_users() -> list:
-    """Charge tous les users depuis Supabase."""
-    resp = requests.get(
-        _supabase_url("users"),
-        headers=_supabase_headers(),
-        timeout=10,
-    )
-    resp.raise_for_status()
-    users = resp.json()
-
-    for user in users:
-        # Normaliser les jours en anglais
-        for rule in user.get("slots_config", []):
-            rule["days"] = [
-                FR_TO_EN_DAYS.get(d.lower(), d.lower()) for d in rule.get("days", [])
-            ]
-        if user.get("slots_sent") is None:
-            user["slots_sent"] = []
-
-    log.info("%d user(s) chargé(s) depuis Supabase.", len(users))
-    return users
-
-
-def save_user_state(user_id: int, slots_sent: list) -> None:
-    """Met à jour slots_sent pour un user dans Supabase."""
-    resp = requests.patch(
-        _supabase_url(f"users?id=eq.{user_id}"),
-        headers=_supabase_headers(),
-        json={"slots_sent": slots_sent},
-        timeout=10,
-    )
-    resp.raise_for_status()
 
 
 # ---------------------------------------------------------------------------
@@ -356,7 +290,7 @@ def run_once(config: dict, users: list) -> list:
         updated_slots_sent = check_user(user, availability_cache, bot_token)
         user["slots_sent"] = updated_slots_sent
         try:
-            save_user_state(user["id"], updated_slots_sent)
+            supabase_client.save_user_state(user["id"], updated_slots_sent)
         except Exception as e:
             log.error("Erreur sauvegarde Supabase pour %s : %s", user["name"], e)
 
@@ -373,7 +307,7 @@ def main() -> None:
     log.info("Démarrage du Playtomic Watcher (intervalle : %d min)", interval_min)
     log.info("=" * 60)
 
-    users = load_users()
+    users = supabase_client.load_users()
 
     while True:
         current_hour = datetime.now().hour
