@@ -158,7 +158,9 @@ def fetch_all_availability(venues: list, days_ahead: int, sport_id: str) -> dict
                         slot["_day_of_week"] = check_date.strftime("%A").lower()
                         slots.append(slot)
                 cache[(tenant_id, date_str)] = slots
-                log.info("  %s : %d créneau(x) dispo", date_str, len(slots))
+                log.info("  %s (%s) : %d créneau(x) dispo", date_str, check_date.strftime("%A").lower(), len(slots))
+                for s in slots:
+                    log.info("    → %s | %d min", s.get("start_time"), s.get("duration", 0))
             except Exception as e:
                 log.warning("Erreur API pour %s le %s : %s", venue_name, date_str, e)
                 cache[(tenant_id, date_str)] = []
