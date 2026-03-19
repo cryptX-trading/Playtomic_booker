@@ -32,29 +32,7 @@ venues:
   #   tenant_id: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
 
 # =============================================================================
-# Créneaux désirés
+# Créneaux désirés : configurés par user dans Supabase (table users.slots_config)
 # =============================================================================
-# Pour chaque règle, définis :
-#   - days        : liste des jours en français (lundi, mardi, mercredi,
-#                   jeudi, vendredi, samedi, dimanche)
-#   - start_times : liste des horaires de début (format HH:MM)
-#   - duration_min: durée minimale acceptable en minutes
-#
-# Un créneau déclenche une notification s'il correspond à AU MOINS UNE règle.
-# =============================================================================
-desired_slots:
-  # Soirs de semaine
-  - days:
-      - mardi
-      - jeudi
-    start_times:
-      - "19:00"
-      - "19:30"
-      - "20:00"
-      - "20:30"
-      - "21:00"
-      - "21:30"
-    duration_min: 90
-  # Week-ends
 
 
